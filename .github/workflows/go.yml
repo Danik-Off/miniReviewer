@@ -6,6 +6,7 @@ name: Go
 on:
   push:
     branches: [ "main" ]
+    tags: [ "v*" ]
   pull_request:
     branches: [ "main" ]
 
@@ -26,3 +27,39 @@ jobs:
 
     - name: Test
       run: go test -v ./...
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.23'
+
+    - name: Build for multiple platforms
+      run: |
+        GOOS=linux GOARCH=amd64 go build -o miniReviewer-linux-amd64 ./cmd
+        GOOS=linux GOARCH=arm64 go build -o miniReviewer-linux-arm64 ./cmd
+        GOOS=darwin GOARCH=amd64 go build -o miniReviewer-darwin-amd64 ./cmd
+        GOOS=darwin GOARCH=arm64 go build -o miniReviewer-darwin-arm64 ./cmd
+        GOOS=windows GOARCH=amd64 go build -o miniReviewer-windows-amd64.exe ./cmd
+        GOOS=windows GOARCH=arm64 go build -o miniReviewer-windows-arm64.exe ./cmd
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          miniReviewer-linux-amd64
+          miniReviewer-linux-arm64
+          miniReviewer-darwin-amd64
+          miniReviewer-darwin-arm64
+          miniReviewer-windows-amd64.exe
+          miniReviewer-windows-arm64.exe
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
