@@ -1,175 +1,28 @@
-# Этот workflow соберет проект Go под несколько ОС и создаст GitHub Release.
-name: Build and Release
+# This workflow will build a golang project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
 
-# Запускать при пуше тега, соответствующего семантике версионирования (например, v1.0.0, v2.1.3)
+name: Go
+
 on:
   push:
-    tags:
-      - 'v*' # Реагирует на теги вида v1.0.0, v2.0.1 и т.д.
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
-  # Задание для сборки под разные ОС и архитектуры
+
   build:
-    name: Build for ${{ matrix.os }}-${{ matrix.arch }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      # fail-fast: false позволяет продолжить сборку для других платформ,
-      # даже если одна из них завершится ошибкой
-      fail-fast: false
-      matrix:
-        # Определяем матрицу сборок: ОС и архитектура
-        # ubuntu-latest, windows-latest, macos-latest - виртуальные окружения GitHub
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        arch: [amd64, arm64] # Можно добавить 386 для 32-битных систем, если нужно
-        # Исключаем неподдерживаемые комбинации (например, Windows на ARM64 на GitHub Actions)
-        exclude:
-          - os: windows-latest
-            arch: arm64 # Исключаем, так как GitHub Actions не предоставляет Windows ARM64 runners напрямую
-          # Если ваш проект не предназначен для ARM64, можно исключить всю ARM64
-          # - arch: arm64
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.20' # Убедитесь, что версия актуальна
-
-      - name: Get dependencies
-        run: go mod download
-
-      # Определяем имя бинарного файла в зависимости от ОС
-      # GOOS и GOARCH устанавливаются GitHub Actions автоматически на основе `runs-on`
-      # Но мы можем их использовать в скриптах
-      - name: Set binary name
-        id: set_binary_name
-        run: |
-          # Получаем имя модуля из go.mod
-          MODULE_NAME=$(grep "^module" go.mod | awk '{print $2}')
-          BINARY_NAME=$(basename $MODULE_NAME)
-          
-          # Добавляем .exe для Windows
-          if [ "$RUNNER_OS" == "Windows" ]; then
-            BINARY_NAME="${BINARY_NAME}.exe"
-          fi
-          
-          # Выводим имя бинарника для использования в следующих шагах
-          echo "BINARY_NAME=$BINARY_NAME" >> $GITHUB_ENV
-        shell: bash
-
-      # Сборка бинарного файла
-      - name: Build binary
-        run: |
-          echo "Building for OS: ${{ runner.os }}, Arch: ${{ matrix.arch }}"
-          # Устанавливаем переменные окружения для кросскомпиляции (на всякий случай)
-          # RUNNER_OS устанавливается GitHub Actions
-          # GOOS и GOARCH могут быть установлены автоматически, но явно зададим для ясности
-          # и чтобы работало на всех runners одинаково
-          case ${{ runner.os }} in
-            Linux)
-              export GOOS=linux
-              ;;
-            Windows)
-              export GOOS=windows
-              ;;
-            macOS)
-              export GOOS=darwin
-              ;;
-          esac
-          
-          export GOARCH=${{ matrix.arch }}
-          
-          # Собираем статически линкованный бинарник
-          # -a: пересобрать все пакеты
-          # -installsuffix: суффикс для установленных пакетов (устарело, но иногда используется)
-          # -o: имя выходного файла
-          go build -a -o "${{ env.BINARY_NAME }}" -v ./...
-        shell: bash # Используем bash на всех ОС для согласованности
-
-      # Архивируем бинарник (опционально, для удобства хранения и скачивания отдельно)
-      # Имя архива будет включать ОС и архитектуру
-      - name: Archive binary (Linux/macOS)
-        if: runner.os != 'Windows' # Для Unix-систем
-        run: |
-          tar -czf "${{ env.BINARY_NAME }}-${{ runner.os }}-${{ matrix.arch }}.tar.gz" "${{ env.BINARY_NAME }}"
-        shell: bash
-
-      - name: Archive binary (Windows)
-        if: runner.os == 'Windows' # Для Windows
-        run: |
-          # Используем tar из Git Bash, который доступен
-          tar -czf "${{ env.BINARY_NAME }}-${{ runner.os }}-${{ matrix.arch }}.tar.gz" "${{ env.BINARY_NAME }}"
-        shell: bash # Используем bash, потому что tar доступен в Git Bash на Windows runner
-
-      # Загружаем архив как артефакт workflow
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ env.BINARY_NAME }}-${{ runner.os }}-${{ matrix.arch }} # Уникальное имя для каждого артефакта
-          path: ${{ env.BINARY_NAME }}-${{ runner.os }}-${{ matrix.arch }}.tar.gz
-          # path: ${{ env.BINARY_NAME }} # Можно загрузить сам бинарник, если не архивировали
-
-  # Отдельное задание для создания Release и загрузки в него артефактов
-  release:
-    name: Create Release
-    needs: build # Это задание запускается только после успешного завершения всех сборок
     runs-on: ubuntu-latest
-    # Проверяем, что это действие вызвано пушем тега
-    if: startsWith(github.ref, 'refs/tags/')
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      # Скачиваем все артефакты, созданные в задании build
-      - name: Download all build artifacts
-        uses: actions/download-artifact@v3
-        with:
-          path: ./artifacts # Скачиваем все артефакты в папку artifacts
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.20'
 
-      # Создаем GitHub Release
-      - name: Create GitHub Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Используем стандартный токен
-        with:
-          tag_name: ${{ github.ref }} # Имя тега
-          release_name: Release ${{ github.ref }} # Название релиза
-          # body_path: CHANGELOG.md # Можно указать файл с описанием изменений
-          # draft: false # Создать как окончательный релиз (по умолчанию)
-          # prerelease: false # Не предварительный релиз (по умолчанию)
-          # body: | # Или указать описание прямо здесь
-          #   Release notes for version ${{ github.ref_name }}
+    - name: Build
+      run: go build -v ./...
 
-      # Загружаем каждый артефакт в созданный Release
-      - name: Upload Release Assets
-        run: |
-          # Перебираем все скачанные артефакты
-          for dir in ./artifacts/*/
-          do
-            if [ -d "$dir" ]; then
-              ASSET_NAME=$(basename "$dir")
-              ASSET_PATH="$dir/${ASSET_NAME}.tar.gz" # Путь к файлу внутри артефакта
-              
-              if [ -f "$ASSET_PATH" ]; then
-                echo "Uploading $ASSET_PATH as $ASSET_NAME.tar.gz"
-                # Используем GitHub CLI (уже установлен на runners) для загрузки
-                gh release upload ${{ github.ref_name }} "$ASSET_PATH" --clobber
-              else
-                echo "Asset file $ASSET_PATH not found in artifact directory $dir"
-                # Попробуем найти сам бинарник, если архив не был создан
-                BINARY_FILE=$(find "$dir" -maxdepth 1 -type f -not -name ".*" | head -n 1)
-                if [ -n "$BINARY_FILE" ]; then
-                  echo "Uploading binary $BINARY_FILE as $ASSET_NAME"
-                  gh release upload ${{ github.ref_name }} "$BINARY_FILE" --clobber
-                else
-                  echo "No file found in artifact directory $dir to upload"
-                fi
-              fi
-            fi
-          done
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
+    - name: Test
+      run: go test -v ./...
