@@ -6,11 +6,12 @@ import (
 	"os"
 	"strings"
 
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"miniReviewer/internal/analyzer"
 	"miniReviewer/internal/git"
 	"miniReviewer/internal/types"
+
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // AnalyzeCmd команда для анализа кода
@@ -26,10 +27,10 @@ func AnalyzeCmd() *cobra.Command {
 Может анализировать последний коммит (--last), конкретные коммиты, ветки или текущие изменения.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			verbose := viper.GetBool("verbose")
-			
+
 			fmt.Println("🚀 Запуск AI-анализа...")
 			fmt.Printf("Модель: %s\n", viper.GetString("ollama.default_model"))
-			
+
 			if verbose {
 				fmt.Println("🔍 Подробный режим включен")
 				fmt.Printf("Параметры анализа:\n")
@@ -39,18 +40,18 @@ func AnalyzeCmd() *cobra.Command {
 				fmt.Printf("  - Выходной файл: %s\n", output)
 				fmt.Printf("  - Игнорируемые паттерны: %v\n", ignore)
 			}
-			
+
 			// Проверяем, что мы в git репозитории
 			if verbose {
 				fmt.Println("🔍 Проверяю git репозиторий...")
 			}
-			
+
 			gitClient := git.NewClient()
 			if !gitClient.IsRepository() {
 				fmt.Println("❌ Git репозиторий не найден. Убедитесь, что вы находитесь в git репозитории.")
 				os.Exit(1)
 			}
-			
+
 			if verbose {
 				fmt.Println("✅ Git репозиторий найден")
 			}
@@ -58,14 +59,15 @@ func AnalyzeCmd() *cobra.Command {
 			// Получаем diff
 			var diff string
 			var err error
-			
+			var lastCommit string
+
 			if verbose {
 				fmt.Println("📝 Получаю изменения...")
 			}
-			
+
 			if last {
 				// Анализ последнего коммита
-				lastCommit, err := gitClient.GetLastCommit()
+				lastCommit, err = gitClient.GetLastCommit()
 				if err != nil {
 					fmt.Printf("❌ Ошибка получения последнего коммита: %v\n", err)
 					os.Exit(1)
@@ -82,7 +84,7 @@ func AnalyzeCmd() *cobra.Command {
 				fmt.Println("Анализ текущих изменений")
 				diff, err = gitClient.GetStatus()
 			}
-			
+
 			if err != nil {
 				fmt.Printf("❌ Ошибка получения изменений: %v\n", err)
 				os.Exit(1)
@@ -92,7 +94,7 @@ func AnalyzeCmd() *cobra.Command {
 				fmt.Println("✅ Нет изменений для анализа")
 				return
 			}
-			
+
 			if verbose {
 				fmt.Printf("📄 Размер изменений: %d символов\n", len(diff))
 			}
@@ -100,36 +102,41 @@ func AnalyzeCmd() *cobra.Command {
 			if len(ignore) > 0 {
 				fmt.Printf("Игнорируемые паттерны: %v\n", ignore)
 			}
-			
+
 			fmt.Println("📝 Анализирую код с помощью AI...")
-			
+
 			if verbose {
 				fmt.Println("🧠 Запускаю AI-анализ...")
 			}
-			
-			// Анализируем код
+
+			// Анализируем код с помощью AI
 			codeAnalyzer := analyzer.NewCodeAnalyzer()
+
+			if verbose {
+				fmt.Println("🔄 Анализирую git diff с помощью AI...")
+			}
+
 			result, err := codeAnalyzer.AnalyzeCode(diff, "Git changes analysis")
 			if err != nil {
 				fmt.Printf("❌ Ошибка AI-анализа: %v\n", err)
 				os.Exit(1)
 			}
-			
+
 			if verbose {
-				fmt.Println("✅ AI-анализ завершен успешно")
+				fmt.Println("✅ Анализ завершен успешно")
 			}
 
 			// Выводим результат
 			fmt.Printf("\n📊 Результат анализа:\n")
 			fmt.Printf("Оценка: %d/100\n", result.Score)
 			fmt.Printf("Найдено проблем: %d\n", len(result.Issues))
-			
+
 			if verbose {
 				fmt.Printf("📈 Детальная информация:\n")
 				fmt.Printf("  - Временная метка: %s\n", result.Timestamp.Format("2006-01-02 15:04:05"))
 				fmt.Printf("  - Файл: %s\n", result.File)
 			}
-			
+
 			for i, issue := range result.Issues {
 				if verbose {
 					// Подробный вывод с размышлениями модели
@@ -156,14 +163,14 @@ func AnalyzeCmd() *cobra.Command {
 				if verbose {
 					fmt.Printf("💾 Сохраняю результат в файл: %s\n", output)
 				}
-				
+
 				if err := saveResultToFile(result, output); err != nil {
 					fmt.Printf("❌ Ошибка сохранения: %v\n", err)
 				} else {
 					fmt.Printf("\n💾 Результат сохранен в: %s\n", output)
 				}
 			}
-			
+
 			fmt.Println("\n✅ Анализ завершен")
 		},
 	}
