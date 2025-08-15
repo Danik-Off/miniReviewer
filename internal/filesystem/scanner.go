@@ -66,6 +66,36 @@ func (s *Scanner) FindFilesByExtension(root, extension string) ([]string, error)
 	return files, err
 }
 
+// FindSupportedFiles находит все поддерживаемые файлы в директории
+func (s *Scanner) FindSupportedFiles(root string) ([]string, error) {
+	var files []string
+	supportedExtensions := []string{".go", ".js", ".ts", ".py", ".java", ".cpp", ".rs", ".kt"}
+	
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			ext := strings.ToLower(filepath.Ext(path))
+			for _, supportedExt := range supportedExtensions {
+				if ext == supportedExt {
+					// Проверяем размер файла
+					if s.maxFileSize > 0 && info.Size() > s.maxFileSize {
+						return nil
+					}
+					// Проверяем паттерны игнорирования
+					if !s.shouldIgnoreFile(path) {
+						files = append(files, path)
+					}
+					break
+				}
+			}
+		}
+		return nil
+	})
+	return files, err
+}
+
 // shouldIgnoreFile проверяет, должен ли файл быть проигнорирован
 func (s *Scanner) shouldIgnoreFile(file string) bool {
 	for _, pattern := range s.ignorePatterns {

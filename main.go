@@ -33,7 +33,7 @@ func main() {
 	// Глобальные флаги
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "конфигурационный файл (по умолчанию .miniReviewer.yaml)")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "подробный вывод")
-	rootCmd.PersistentFlags().StringVar(&model, "model", "codellama:7b", "модель Ollama для использования")
+	rootCmd.PersistentFlags().StringVar(&model, "model", "gemma3:latest", "модель Ollama для использования")
 
 	// Команды
 	rootCmd.AddCommand(cmd.AnalyzeCmd())
@@ -62,7 +62,7 @@ func initConfig() {
 
 	// Значения по умолчанию
 	viper.SetDefault("ollama.host", "http://localhost:11434")
-	viper.SetDefault("ollama.default_model", "codellama:7b")
+	viper.SetDefault("ollama.default_model", "gemma3:latest")
 	viper.SetDefault("ollama.max_tokens", 4000)
 	viper.SetDefault("ollama.temperature", 0.1)
 	viper.SetDefault("ollama.timeout", "300s")
@@ -95,5 +95,8 @@ func initConfig() {
 	// Применение флагов командной строки
 	if model != "" {
 		viper.Set("ollama.default_model", model)
+	}
+	if verbose {
+		viper.Set("verbose", verbose)
 	}
 }

@@ -19,6 +19,7 @@ type Issue struct {
 	Line        int    `json:"line,omitempty"`
 	Column      int    `json:"column,omitempty"`
 	File        string `json:"file,omitempty"`
+	Reasoning   string `json:"reasoning,omitempty"` // Размышления модели о проблеме
 }
 
 // AnalysisOptions опции для анализа

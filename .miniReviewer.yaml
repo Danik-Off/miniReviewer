@@ -4,7 +4,7 @@
 # Настройки Ollama
 ollama:
   host: "http://localhost:11434"
-  default_model: "codellama:7b"
+  default_model: "gemma3:latest"
   max_tokens: 4000
   temperature: 0.1
   timeout: "300s"

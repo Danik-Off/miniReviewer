@@ -10,7 +10,7 @@
 - Анализ архитектуры и предложения по улучшению
 - Проверка безопасности кода
 - Поддержка различных языков программирования
-- Интеграция с популярными моделями Ollama (codellama, llama2, mistral)
+- Интеграция с популярными моделями Ollama (gemma, codellama, llama2, mistral)
 
 ## Требования
 
@@ -46,7 +46,7 @@ go build -o miniReviewer
 
 ```bash
 # Рекомендуемые модели для анализа кода
-ollama pull codellama:7b
+ollama pull gemma3:latest
 ollama pull codellama:13b
 ollama pull llama2:7b
 ollama pull mistral:7b
@@ -61,7 +61,7 @@ ollama pull mistral:7b
 ./miniReviewer analyze
 
 # Анализ конкретного коммита с AI
-./miniReviewer analyze --commit <hash> --model codellama:7b
+./miniReviewer analyze --commit <hash> --model gemma3:latest
 
 # Анализ изменений между ветками
 ./miniReviewer analyze --from main --to feature-branch --verbose
@@ -73,10 +73,10 @@ ollama pull mistral:7b
 ./miniReviewer report --output report.html --model mistral:7b
 
 # AI-анализ архитектуры
-./miniReviewer architecture --model codellama:7b
+./miniReviewer architecture --model gemma3:latest
 
 # AI-проверка безопасности
-./miniReviewer security --model codellama:7b
+./miniReviewer security --model gemma3:latest
 
 # AI-анализ стиля кода
 ./miniReviewer style --model llama2:7b
@@ -90,7 +90,7 @@ ollama pull mistral:7b
 
 ### Флаги
 
-- `--model <model>` - указать модель Ollama (по умолчанию: codellama:7b)
+- `--model <model>` - указать модель Ollama (по умолчанию: gemma3:latest)
 - `--verbose` - подробный вывод
 - `--output <file>` - указать файл для вывода
 - `--config <file>` - указать конфигурационный файл
@@ -107,7 +107,7 @@ ollama pull mistral:7b
 # Настройки Ollama
 ollama:
   host: "http://localhost:11434"
-  default_model: "codellama:7b"
+  default_model: "gemma3:latest"
   max_tokens: 4000
   temperature: 0.1
   timeout: 300s
@@ -145,7 +145,7 @@ reports:
 
 ```bash
 # Анализ изменений с использованием codellama
-./miniReviewer analyze --from main --to feature/new-feature --model codellama:7b --verbose
+./miniReviewer analyze --from main --to feature/new-feature --model gemma3:latest --verbose
 
 # Генерация HTML отчета с AI-рекомендациями
 ./miniReviewer analyze --from main --to feature/new-feature --output pr-review.html --model codellama:13b
@@ -155,7 +155,7 @@ reports:
 
 ```bash
 # Проверка текущих изменений с AI
-./miniReviewer quality --model codellama:7b --severity high
+./miniReviewer quality --model gemma3:latest --severity high
 
 # Проверка с игнорированием определенных файлов
 ./miniReviewer quality --ignore "*.test.go" --ignore "vendor/*" --model mistral:7b
@@ -168,14 +168,14 @@ reports:
 ./miniReviewer architecture --model codellama:13b --verbose
 
 # Анализ конкретной директории
-./miniReviewer architecture --path ./internal --model codellama:7b
+./miniReviewer architecture --path ./internal --model gemma3:latest
 ```
 
 ### AI-анализ безопасности
 
 ```bash
 # Проверка зависимостей на уязвимости
-./miniReviewer security --check-dependencies --model codellama:7b
+./miniReviewer security --check-dependencies --model gemma3:latest
 
 # Сканирование кода на проблемы безопасности
 ./miniReviewer security --scan-code --model codellama:13b
@@ -211,7 +211,7 @@ miniReviewer/
 
 ### Рекомендуемые модели
 
-1. **codellama:7b** - быстрый анализ, хорошее качество
+1. **gemma3:latest** - быстрый анализ, хорошее качество
 2. **codellama:13b** - высокое качество анализа, медленнее
 3. **llama2:7b** - универсальная модель, хороший баланс
 4. **mistral:7b** - отличное качество для европейских языков
@@ -220,7 +220,7 @@ miniReviewer/
 
 ```bash
 # Загрузка CodeLlama (рекомендуется для анализа кода)
-ollama pull codellama:7b
+ollama pull gemma3:latest
 
 # Загрузка Llama2
 ollama pull llama2:7b
@@ -270,7 +270,7 @@ lsof -i :11434
 ollama list
 
 # Загрузка модели
-ollama pull codellama:7b
+ollama pull gemma3:latest
 ```
 
 ## Лицензия
