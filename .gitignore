@@ -31,3 +31,57 @@ go.work
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# miniReviewer specific
+miniReviewer
+miniReviewer.exe
+miniReviewer.darwin
+miniReviewer.linux
+miniReviewer.windows
+
+# Build artifacts
+dist/
+build/
+bin/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+*~
+
+# Configuration files with sensitive data
+.env
+.env.local
+.env.*.local
+
+# Coverage reports
+coverage.txt
+coverage.html
+coverage.out
+
+# Benchmark results
+*.bench
+
+# Profiling data
+*.prof
+*.pprof
+
+# Air live reload
+tmp/
+
+# Go modules
+go.sum
+
+# IDE specific
+*.sublime-project
+*.sublime-workspace
+.atom/
+.brackets.json
+
+# OS specific
+*.orig
+*.rej
