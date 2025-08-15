@@ -81,6 +81,16 @@ func (c *Client) GetCommitHistory(limit int) ([]string, error) {
 	return commits, nil
 }
 
+// GetLastCommit получает хеш последнего коммита
+func (c *Client) GetLastCommit() (string, error) {
+	cmd := exec.Command("git", "rev-parse", "HEAD")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("ошибка получения последнего коммита: %v", err)
+	}
+	return strings.TrimSpace(string(output)), nil
+}
+
 // GetChangedFiles получает список измененных файлов
 func (c *Client) GetChangedFiles(from, to string) ([]string, error) {
 	var cmd *exec.Cmd

@@ -143,6 +143,24 @@ func QualityCmd() *cobra.Command {
 				if ext == ".js" || ext == ".ts" {
 					// Для JavaScript файлов используем статический анализ
 					jsIssues := codeAnalyzer.AnalyzeJavaScript(string(content), file)
+
+					if verbose {
+						// С флагом verbose также запускаем AI-анализ для получения размышлений
+						aiResult, err := codeAnalyzer.AnalyzeCode(string(content), fmt.Sprintf("Quality analysis of JavaScript file %s", file))
+						if err == nil && len(aiResult.Issues) > 0 {
+							// Объединяем статические проблемы с AI-размышлениями
+							for i := range jsIssues {
+								// Ищем соответствующую AI-проблему по типу и строке
+								for _, aiIssue := range aiResult.Issues {
+									if aiIssue.Type == jsIssues[i].Type && aiIssue.Line == jsIssues[i].Line {
+										jsIssues[i].Reasoning = aiIssue.Reasoning
+										break
+									}
+								}
+							}
+						}
+					}
+
 					result = &types.CodeAnalysisResult{
 						File:      file,
 						Issues:    jsIssues,

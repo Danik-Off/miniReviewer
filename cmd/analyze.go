@@ -17,12 +17,13 @@ import (
 func AnalyzeCmd() *cobra.Command {
 	var from, to, commit, output string
 	var ignore []string
+	var last bool
 
 	cmd := &cobra.Command{
 		Use:   "analyze",
 		Short: "AI-анализ изменений в коде",
 		Long: `Анализирует изменения в git репозитории с использованием AI (Ollama).
-Может анализировать коммиты, ветки или текущие изменения.`,
+Может анализировать последний коммит (--last), конкретные коммиты, ветки или текущие изменения.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			verbose := viper.GetBool("verbose")
 			
@@ -62,7 +63,16 @@ func AnalyzeCmd() *cobra.Command {
 				fmt.Println("📝 Получаю изменения...")
 			}
 			
-			if commit != "" {
+			if last {
+				// Анализ последнего коммита
+				lastCommit, err := gitClient.GetLastCommit()
+				if err != nil {
+					fmt.Printf("❌ Ошибка получения последнего коммита: %v\n", err)
+					os.Exit(1)
+				}
+				fmt.Printf("Анализ последнего коммита: %s\n", lastCommit)
+				diff, err = gitClient.GetDiff(lastCommit, lastCommit+"~1")
+			} else if commit != "" {
 				fmt.Printf("Анализ коммита: %s\n", commit)
 				diff, err = gitClient.GetDiff(commit, commit+"~1")
 			} else if from != "" && to != "" {
@@ -158,6 +168,7 @@ func AnalyzeCmd() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().BoolVar(&last, "last", false, "анализ последнего коммита")
 	cmd.Flags().StringVar(&from, "from", "", "исходная ветка/коммит")
 	cmd.Flags().StringVar(&to, "to", "", "целевая ветка/коммит")
 	cmd.Flags().StringVar(&commit, "commit", "", "анализ конкретного коммита")
