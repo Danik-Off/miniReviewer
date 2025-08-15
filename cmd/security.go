@@ -148,7 +148,7 @@ func SecurityCmd() *cobra.Command {
 					} else {
 						// Краткий вывод - только проблема и строка
 						if issue.Line > 0 {
-							fmt.Printf("⚠️  [%s] %s (строка %d): %s\n", issue.Severity, issue.File, issue.Message)
+							fmt.Printf("⚠️  [%s] %s (строка %d): %s\n", issue.Severity, issue.File, issue.Line, issue.Message)
 						} else {
 							fmt.Printf("⚠️  [%s] %s: %s\n", issue.Severity, issue.File, issue.Message)
 						}

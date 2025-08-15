@@ -24,11 +24,11 @@ func ArchitectureCmd() *cobra.Command {
 Может анализировать как отдельные файлы, так и целые директории.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			verbose := viper.GetBool("verbose")
-			
+
 			fmt.Println("🏗️  Запуск анализа архитектуры...")
 			fmt.Printf("Модель: %s\n", viper.GetString("ollama.default_model"))
 			fmt.Printf("Путь: %s\n", path)
-			
+
 			if verbose {
 				fmt.Println("🔍 Подробный режим включен")
 				fmt.Printf("Игнорируемые паттерны: %v\n", viper.GetStringSlice("analysis.ignore_patterns"))
@@ -38,11 +38,11 @@ func ArchitectureCmd() *cobra.Command {
 			// Анализируем структуру проекта
 			ignorePatterns := viper.GetStringSlice("analysis.ignore_patterns")
 			scanner := filesystem.NewScanner(ignorePatterns, 0)
-			
+
 			if verbose {
 				fmt.Println("📁 Сканирую структуру проекта...")
 			}
-			
+
 			structure, err := scanner.AnalyzeProjectStructure(path)
 			if err != nil {
 				fmt.Printf("❌ Ошибка анализа структуры: %v\n", err)
@@ -52,14 +52,14 @@ func ArchitectureCmd() *cobra.Command {
 			if verbose {
 				fmt.Println("📊 Структура проекта получена успешно")
 			}
-			
+
 			fmt.Printf("📁 Структура проекта:\n%s\n", structure)
 
 			// Анализируем архитектуру с помощью AI
 			if verbose {
 				fmt.Println("🧠 Запускаю AI-анализ архитектуры...")
 			}
-			
+
 			codeAnalyzer := analyzer.NewCodeAnalyzer()
 			result, err := codeAnalyzer.AnalyzeCode(structure, "Project architecture analysis")
 			if err != nil {
@@ -70,9 +70,9 @@ func ArchitectureCmd() *cobra.Command {
 			if verbose {
 				fmt.Println("✅ AI-анализ завершен успешно")
 			}
-			
+
 			fmt.Printf("\n📊 Оценка архитектуры: %d/100\n", result.Score)
-			
+
 			if len(result.Issues) > 0 {
 				fmt.Printf("\n🔍 Найденные проблемы:\n")
 				for _, issue := range result.Issues {
@@ -87,7 +87,7 @@ func ArchitectureCmd() *cobra.Command {
 					} else {
 						// Краткий вывод - только проблема и строка
 						if issue.Line > 0 {
-							fmt.Printf("💡 [%s] %s (строка %d): %s\n", issue.Severity, issue.Type, issue.Message)
+							fmt.Printf("💡 [%s] %s (строка %d): %s\n", issue.Severity, issue.Type, issue.Line, issue.Message)
 						} else {
 							fmt.Printf("💡 [%s] %s: %s\n", issue.Severity, issue.Type, issue.Message)
 						}
