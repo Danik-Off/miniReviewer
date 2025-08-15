@@ -10,9 +10,6 @@ on:
   pull_request:
     branches: [ "main" ]
 
-permissions:
-  contents: write
-
 jobs:
 
   build:
@@ -37,6 +34,8 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     permissions:
       contents: write
+      issues: write
+      pull-requests: write
     steps:
     - uses: actions/checkout@v4
 
@@ -58,17 +57,84 @@ jobs:
       run: ls -la miniReviewer-*
 
     - name: Create Release
-      uses: softprops/action-gh-release@v1
-      with:
-        files: |
-          miniReviewer-linux-amd64
-          miniReviewer-linux-arm64
-          miniReviewer-darwin-amd64
-          miniReviewer-darwin-arm64
-          miniReviewer-windows-amd64.exe
-          miniReviewer-windows-arm64.exe
-        draft: false
-        prerelease: false
-        generate_release_notes: true
+      uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref_name }}
+        release_name: Release ${{ github.ref_name }}
+        body: |
+          ## What's Changed
+          
+          Automated release for version ${{ github.ref_name }}
+          
+          ## Downloads
+          
+          - **Linux AMD64**: `miniReviewer-linux-amd64`
+          - **Linux ARM64**: `miniReviewer-linux-arm64`
+          - **macOS AMD64**: `miniReviewer-darwin-amd64`
+          - **macOS ARM64**: `miniReviewer-darwin-arm64`
+          - **Windows AMD64**: `miniReviewer-windows-amd64.exe`
+          - **Windows ARM64**: `miniReviewer-windows-arm64.exe`
+        draft: false
+        prerelease: false
+
+    - name: Upload Release Assets - Linux AMD64
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./miniReviewer-linux-amd64
+        asset_name: miniReviewer-linux-amd64
+        asset_content_type: application/octet-stream
+
+    - name: Upload Release Assets - Linux ARM64
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./miniReviewer-linux-arm64
+        asset_name: miniReviewer-linux-arm64
+        asset_content_type: application/octet-stream
+
+    - name: Upload Release Assets - macOS AMD64
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./miniReviewer-darwin-amd64
+        asset_name: miniReviewer-darwin-amd64
+        asset_content_type: application/octet-stream
+
+    - name: Upload Release Assets - macOS ARM64
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./miniReviewer-darwin-arm64
+        asset_name: miniReviewer-darwin-arm64
+        asset_content_type: application/octet-stream
+
+    - name: Upload Release Assets - Windows AMD64
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./miniReviewer-windows-amd64.exe
+        asset_name: miniReviewer-windows-amd64.exe
+        asset_content_type: application/octet-stream
+
+    - name: Upload Release Assets - Windows ARM64
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./miniReviewer-windows-arm64.exe
+        asset_name: miniReviewer-windows-arm64.exe
+        asset_content_type: application/octet-stream
