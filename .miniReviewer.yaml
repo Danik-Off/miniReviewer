@@ -1,0 +1,75 @@
+# Конфигурация miniReviewer
+# AI-powered code review assistant using Ollama
+
+# Настройки Ollama
+ollama:
+  host: "http://localhost:11434"
+  default_model: "codellama:7b"
+  max_tokens: 4000
+  temperature: 0.1
+  timeout: "300s"
+
+# Настройки анализа
+analysis:
+  languages: ["go", "python", "javascript", "typescript", "java", "c++", "rust", "kotlin"]
+  ignore_patterns: 
+    - "vendor/*"
+    - "node_modules/*"
+    - "*.min.js"
+    - "*.min.css"
+    - "*.min.*"
+    - "dist/*"
+    - "build/*"
+    - ".git/*"
+    - "*.log"
+    - "*.tmp"
+  max_file_size: "1MB"
+  enable_git_analysis: true
+  enable_file_analysis: true
+
+# Настройки качества
+quality:
+  max_complexity: 10
+  max_function_length: 50
+  max_file_length: 1000
+  max_parameters: 5
+  enable_ai_suggestions: true
+  enable_complexity_analysis: true
+  enable_style_analysis: true
+  enable_performance_analysis: true
+
+# Настройки безопасности
+security:
+  enabled: true
+  check_dependencies: true
+  ai_vulnerability_scan: true
+  check_secrets: true
+  check_permissions: true
+  enable_sast: true
+  enable_dependency_scan: true
+
+# Настройки отчетов
+reports:
+  format: "html"
+  include_metrics: true
+  include_ai_suggestions: true
+  include_code_examples: true
+  include_severity_levels: true
+  include_recommendations: true
+  enable_color_output: true
+  enable_emoji: true
+
+# Настройки Git
+git:
+  enable_diff_analysis: true
+  enable_commit_analysis: true
+  enable_branch_analysis: true
+  max_commit_history: 100
+  ignore_merge_commits: false
+
+# Настройки производительности
+performance:
+  max_concurrent_analyses: 4
+  enable_caching: true
+  cache_ttl: "1h"
+  enable_progress_bar: true
