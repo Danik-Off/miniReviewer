@@ -54,7 +54,7 @@ go build -o miniReviewer
 
 ```bash
 # Рекомендуемые модели для анализа кода
-ollama pull gemma3:latest
+ollama pull gemma3:
 ollama pull codellama:13b
 ollama pull llama2:7b
 ollama pull mistral:7b

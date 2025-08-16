@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"miniReviewer/internal/analyzer"
@@ -52,7 +53,7 @@ func SecurityCmd() *cobra.Command {
 
 				if verbose {
 					fmt.Printf("📁 Путь для анализа: %s\n", analysisPath)
-					fmt.Println("📁 Поиск Go файлов для сканирования...")
+					fmt.Println("📁 Поиск поддерживаемых файлов для сканирования...")
 				}
 
 				ignorePatterns := viper.GetStringSlice("analysis.ignore_patterns")
@@ -63,16 +64,28 @@ func SecurityCmd() *cobra.Command {
 
 				// Проверяем, является ли путь файлом
 				if fileInfo, statErr := os.Stat(analysisPath); statErr == nil && !fileInfo.IsDir() {
-					// Это файл - проверяем, что это Go файл
-					if strings.HasSuffix(analysisPath, ".go") {
+					// Это файл - проверяем, что это поддерживаемый файл
+					ext := strings.ToLower(filepath.Ext(analysisPath))
+					supportedExtensions := []string{".go", ".js", ".ts", ".py", ".java", ".cpp", ".rs", ".kt"}
+
+					isSupported := false
+					for _, supportedExt := range supportedExtensions {
+						if ext == supportedExt {
+							isSupported = true
+							break
+						}
+					}
+
+					if isSupported {
 						files = []string{analysisPath}
 					} else {
-						fmt.Printf("❌ Указанный файл не является Go файлом: %s\n", analysisPath)
+						fmt.Printf("❌ Указанный файл не является поддерживаемым: %s\n", analysisPath)
+						fmt.Printf("Поддерживаемые расширения: %v\n", supportedExtensions)
 						os.Exit(1)
 					}
 				} else {
-					// Это директория - ищем Go файлы
-					files, err = scanner.FindGoFiles(analysisPath)
+					// Это директория - ищем поддерживаемые файлы
+					files, err = scanner.FindSupportedFiles(analysisPath)
 				}
 				if err != nil {
 					fmt.Printf("❌ Ошибка поиска файлов: %v\n", err)
@@ -109,6 +122,26 @@ func SecurityCmd() *cobra.Command {
 						fmt.Printf("   ⚠️  Найдено проблем: %d\n", len(issues))
 					}
 					securityIssues = append(securityIssues, issues...)
+
+					// Дополнительно используем AI для анализа безопасности
+					if verbose {
+						fmt.Printf("   🧠 Запускаю AI-анализ безопасности...\n")
+					}
+
+					aiResult, err := codeAnalyzer.AnalyzeCode(string(content), fmt.Sprintf("Security analysis of %s file", filepath.Ext(file)))
+					if err == nil && len(aiResult.Issues) > 0 {
+						// Фильтруем только проблемы безопасности из AI-анализа
+						for _, aiIssue := range aiResult.Issues {
+							if aiIssue.Type == "security" || aiIssue.Type == "vulnerability" ||
+								aiIssue.Type == "injection" || aiIssue.Type == "xss" ||
+								aiIssue.Type == "sqli" || aiIssue.Type == "authentication" ||
+								aiIssue.Type == "authorization" {
+								// Добавляем информацию о файле
+								aiIssue.File = file
+								securityIssues = append(securityIssues, aiIssue)
+							}
+						}
+					}
 				}
 
 				fmt.Printf("\n📊 Результаты сканирования безопасности:\n")
@@ -136,23 +169,121 @@ func SecurityCmd() *cobra.Command {
 					fmt.Println()
 				}
 
-				for _, issue := range securityIssues {
-					if verbose {
-						// Подробный вывод с размышлениями модели
-						fmt.Printf("  ⚠️  [%s] %s (строка %d):\n", strings.ToUpper(issue.Severity), issue.Type, issue.Line)
-						fmt.Printf("     💬 %s\n", issue.Message)
-						fmt.Printf("     💡 %s\n", issue.Suggestion)
-						if issue.Reasoning != "" {
-							fmt.Printf("     🧠 %s\n", issue.Reasoning)
-						}
-					} else {
-						// Краткий вывод - только проблема и строка
-						if issue.Line > 0 {
-							fmt.Printf("⚠️  [%s] %s (строка %d): %s\n", issue.Severity, issue.File, issue.Line, issue.Message)
-						} else {
-							fmt.Printf("⚠️  [%s] %s: %s\n", issue.Severity, issue.File, issue.Message)
+				if len(securityIssues) > 0 {
+					fmt.Printf("\n🔍 Найденные проблемы безопасности:\n")
+
+					// Группируем проблемы по типам
+					issuesByType := make(map[string][]types.Issue)
+					for _, issue := range securityIssues {
+						issuesByType[issue.Type] = append(issuesByType[issue.Type], issue)
+					}
+
+					// Определяем порядок приоритета типов безопасности
+					typePriority := []string{"security", "vulnerability", "injection", "xss", "sqli", "authentication", "authorization"}
+
+					for _, issueType := range typePriority {
+						if issues, exists := issuesByType[issueType]; exists {
+							// Эмодзи для разных типов проблем безопасности
+							typeEmoji := map[string]string{
+								"security":       "🔒",
+								"vulnerability":  "💥",
+								"injection":      "💉",
+								"xss":            "🌐",
+								"sqli":           "🗄️",
+								"authentication": "🔐",
+								"authorization":  "🚪",
+							}
+
+							emoji := typeEmoji[issueType]
+							if emoji == "" {
+								emoji = "⚠️"
+							}
+
+							fmt.Printf("\n%s %s (%d проблем):\n", emoji, strings.ToUpper(issueType), len(issues))
+
+							for i, issue := range issues {
+								// Эмодзи для важности
+								severityEmoji := map[string]string{
+									"critical": "🚨",
+									"high":     "⚠️",
+									"medium":   "⚡",
+									"low":      "💡",
+									"info":     "ℹ️",
+								}
+
+								emoji = severityEmoji[issue.Severity]
+								if emoji == "" {
+									emoji = "⚠️"
+								}
+
+								fmt.Printf("\n  %s [%s] %s\n", emoji, strings.ToUpper(issue.Severity), issue.Message)
+
+								if issue.Line > 0 {
+									fmt.Printf("     📍 Строка: %d\n", issue.Line)
+								}
+
+								if issue.File != "" {
+									fmt.Printf("     📁 Файл: %s\n", issue.File)
+								}
+
+								if issue.Suggestion != "" {
+									fmt.Printf("     💡 Решение: %s\n", issue.Suggestion)
+								}
+
+								if issue.Reasoning != "" {
+									fmt.Printf("     🧠 Объяснение: %s\n", issue.Reasoning)
+								}
+
+								// Добавляем разделитель между проблемами
+								if i < len(issues)-1 {
+									fmt.Println("     ──────────────────────────")
+								}
+							}
 						}
 					}
+
+					// Сводная статистика по безопасности
+					fmt.Printf("\n📈 Сводная статистика безопасности:\n")
+					severityCounts := make(map[string]int)
+					typeCounts := make(map[string]int)
+
+					for _, issue := range securityIssues {
+						severityCounts[issue.Severity]++
+						typeCounts[issue.Type]++
+					}
+
+					fmt.Printf("  🔍 По важности:\n")
+					for _, severity := range []string{"critical", "high", "medium", "low", "info"} {
+						if count := severityCounts[severity]; count > 0 {
+							emoji := map[string]string{
+								"critical": "🚨",
+								"high":     "⚠️",
+								"medium":   "⚡",
+								"low":      "💡",
+								"info":     "ℹ️",
+							}[severity]
+							fmt.Printf("    %s %s: %d\n", emoji, strings.ToUpper(severity), count)
+						}
+					}
+
+					fmt.Printf("  📊 По типам:\n")
+					for _, issueType := range []string{"security", "vulnerability", "injection", "xss", "sqli", "authentication", "authorization"} {
+						if count := typeCounts[issueType]; count > 0 {
+							emoji := map[string]string{
+								"security":       "🔒",
+								"vulnerability":  "💥",
+								"injection":      "💉",
+								"xss":            "🌐",
+								"sqli":           "🗄️",
+								"authentication": "🔐",
+								"authorization":  "🚪",
+							}[issueType]
+							fmt.Printf("    %s %s: %d\n", emoji, strings.ToUpper(issueType), count)
+						}
+					}
+
+				} else {
+					fmt.Println("✅ Проблем безопасности не найдено")
 				}
 			}
 
