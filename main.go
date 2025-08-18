@@ -22,11 +22,18 @@ func main() {
 		Use:   "miniReviewer",
 		Short: "AI-powered code review assistant using Ollama",
 		Long: `miniReviewer - это консольный помощник для проведения code review 
-с использованием AI (Ollama). Он анализирует код, предлагает улучшения 
-и генерирует подробные отчеты.`,
+		с использованием AI (Ollama). Он анализирует код, предлагает улучшения 
+		и генерирует подробные отчеты.`,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			// Инициализация конфигурации
 			initConfig()
+			// Применяем только явно переданные пользователем флаги
+			if cmd.Flags().Changed("model") {
+				viper.Set("ollama.default_model", model)
+			}
+			if cmd.Flags().Changed("verbose") {
+				viper.Set("verbose", verbose)
+			}
 		},
 	}
 
@@ -92,11 +99,5 @@ func initConfig() {
 		}
 	}
 
-	// Применение флагов командной строки
-	if model != "" {
-		viper.Set("ollama.default_model", model)
-	}
-	if verbose {
-		viper.Set("verbose", verbose)
-	}
+	// Примечание: значения флагов применяются только если они явно заданы (см. PersistentPreRun)
 }
