@@ -110,13 +110,13 @@ func AnalyzeCmd() *cobra.Command {
 			}
 
 			// Анализируем код с помощью AI
-			codeAnalyzer := analyzer.NewCodeAnalyzer()
+			qualityAnalyzer := analyzer.NewQualityAnalyzer()
 
 			if verbose {
 				fmt.Println("🔄 Анализирую git diff с помощью AI...")
 			}
 
-			result, err := codeAnalyzer.AnalyzeCode(diff, "Git changes analysis")
+			result, err := qualityAnalyzer.Analyze(diff, "Git changes analysis")
 			if err != nil {
 				fmt.Printf("❌ Ошибка AI-анализа: %v\n", err)
 				os.Exit(1)

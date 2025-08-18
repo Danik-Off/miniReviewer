@@ -64,7 +64,9 @@ func ReportCmd() *cobra.Command {
 
 			// Анализируем файлы для отчета
 			var results []*types.CodeAnalysisResult
-			codeAnalyzer := analyzer.NewCodeAnalyzer()
+			qualityAnalyzer := analyzer.NewQualityAnalyzer()
+			securityAnalyzer := analyzer.NewSecurityAnalyzer()
+			architectureAnalyzer := analyzer.NewArchitectureAnalyzer()
 
 			// Определяем путь для анализа (по умолчанию текущая директория)
 			analysisPath := "."
@@ -104,19 +106,28 @@ func ReportCmd() *cobra.Command {
 				}
 
 				// Анализируем качество кода
-				qualityResult, err := codeAnalyzer.AnalyzeCode(string(content), fmt.Sprintf("Quality analysis of %s", analysisPath))
+				qualityResult, err := qualityAnalyzer.Analyze(string(content), fmt.Sprintf("Quality analysis of %s", analysisPath))
 				if err != nil {
 					fmt.Printf("⚠️  Ошибка анализа качества: %v\n", err)
 				} else {
 					combinedResult.Issues = append(combinedResult.Issues, qualityResult.Issues...)
 				}
 
-				// Анализируем безопасность
-				securityIssues := codeAnalyzer.AnalyzeSecurity(string(content), analysisPath)
-				combinedResult.Issues = append(combinedResult.Issues, securityIssues...)
+				// Анализируем безопасность с помощью AI
+				securityResult, err := securityAnalyzer.Analyze(string(content), fmt.Sprintf("Security analysis of %s", analysisPath))
+				if err != nil {
+					fmt.Printf("⚠️  Ошибка анализа безопасности: %v\n", err)
+				} else {
+					// Фильтруем только проблемы безопасности
+					for _, issue := range securityResult.Issues {
+						if issue.Type == "security" {
+							combinedResult.Issues = append(combinedResult.Issues, issue)
+						}
+					}
+				}
 
 				// Анализируем архитектуру
-				architectureResult, err := codeAnalyzer.AnalyzeCode(string(content), fmt.Sprintf("Architecture analysis of %s", analysisPath))
+				architectureResult, err := architectureAnalyzer.Analyze(string(content), fmt.Sprintf("Architecture analysis of %s", analysisPath))
 				if err != nil {
 					fmt.Printf("⚠️  Ошибка анализа архитектуры: %v\n", err)
 				} else {
@@ -177,7 +188,7 @@ func ReportCmd() *cobra.Command {
 					}
 
 					// Анализируем качество кода
-					qualityResult, err := codeAnalyzer.AnalyzeCode(string(content), fmt.Sprintf("Quality analysis of %s", file))
+					qualityResult, err := qualityAnalyzer.Analyze(string(content), fmt.Sprintf("Quality analysis of %s", file))
 					if err != nil {
 						if verbose {
 							fmt.Printf("   ⚠️  Ошибка анализа качества: %v\n", err)
@@ -187,12 +198,24 @@ func ReportCmd() *cobra.Command {
 
 					combinedResult.Issues = append(combinedResult.Issues, qualityResult.Issues...)
 
-					// Анализируем безопасность
-					securityIssues := codeAnalyzer.AnalyzeSecurity(string(content), file)
-					combinedResult.Issues = append(combinedResult.Issues, securityIssues...)
+					// Анализируем безопасность с помощью AI
+					securityResult, err := securityAnalyzer.Analyze(string(content), fmt.Sprintf("Security analysis of %s", file))
+					if err != nil {
+						if verbose {
+							fmt.Printf("   ⚠️  Ошибка анализа безопасности: %v\n", err)
+						}
+						continue
+					} else {
+						// Фильтруем только проблемы безопасности
+						for _, issue := range securityResult.Issues {
+							if issue.Type == "security" {
+								combinedResult.Issues = append(combinedResult.Issues, issue)
+							}
+						}
+					}
 
 					// Анализируем архитектуру
-					architectureResult, err := codeAnalyzer.AnalyzeCode(string(content), fmt.Sprintf("Architecture analysis of %s", file))
+					architectureResult, err := architectureAnalyzer.Analyze(string(content), fmt.Sprintf("Architecture analysis of %s", file))
 					if err != nil {
 						if verbose {
 							fmt.Printf("   ⚠️  Ошибка анализа архитектуры: %v\n", err)

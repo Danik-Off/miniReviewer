@@ -45,7 +45,7 @@ func ArchitectureCmd() *cobra.Command {
 			}
 
 			var result *types.CodeAnalysisResult
-			codeAnalyzer := analyzer.NewCodeAnalyzer()
+			architectureAnalyzer := analyzer.NewArchitectureAnalyzer()
 
 			if !fileInfo.IsDir() {
 				// Анализируем отдельный файл
@@ -76,7 +76,7 @@ func ArchitectureCmd() *cobra.Command {
 					context = "Architecture analysis of Python file"
 				}
 
-				result, err = codeAnalyzer.AnalyzeCode(string(content), context)
+				result, err = architectureAnalyzer.Analyze(string(content), context)
 				if err != nil {
 					fmt.Printf("❌ Ошибка AI-анализа: %v\n", err)
 					os.Exit(1)
@@ -111,7 +111,7 @@ func ArchitectureCmd() *cobra.Command {
 					fmt.Println("🧠 Запускаю AI-анализ архитектуры проекта...")
 				}
 
-				result, err = codeAnalyzer.AnalyzeCode(structure, "Project architecture analysis")
+				result, err = architectureAnalyzer.Analyze(structure, "Project architecture analysis")
 				if err != nil {
 					fmt.Printf("❌ Ошибка AI-анализа: %v\n", err)
 					os.Exit(1)

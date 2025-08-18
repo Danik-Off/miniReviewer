@@ -97,7 +97,7 @@ func SecurityCmd() *cobra.Command {
 				}
 
 				var securityIssues []types.Issue
-				codeAnalyzer := analyzer.NewCodeAnalyzer()
+				securityAnalyzer := analyzer.NewSecurityAnalyzer()
 
 				for i, file := range files {
 					if verbose {
@@ -116,32 +116,31 @@ func SecurityCmd() *cobra.Command {
 						fmt.Printf("   📄 Размер: %d байт\n", len(content))
 					}
 
-					// Анализируем код на проблемы безопасности
-					issues := codeAnalyzer.AnalyzeSecurity(string(content), file)
-					if verbose && len(issues) > 0 {
-						fmt.Printf("   ⚠️  Найдено проблем: %d\n", len(issues))
-					}
-					securityIssues = append(securityIssues, issues...)
-
-					// Дополнительно используем AI для анализа безопасности
-					if verbose {
-						fmt.Printf("   🧠 Запускаю AI-анализ безопасности...\n")
+					// Анализируем код на проблемы безопасности с помощью AI
+					aiResult, err := securityAnalyzer.Analyze(string(content), fmt.Sprintf("Security analysis of %s file", filepath.Ext(file)))
+					if err != nil {
+						if verbose {
+							fmt.Printf("   ⚠️  Ошибка AI-анализа: %v\n", err)
+						}
+						continue
 					}
 
-					aiResult, err := codeAnalyzer.AnalyzeCode(string(content), fmt.Sprintf("Security analysis of %s file", filepath.Ext(file)))
-					if err == nil && len(aiResult.Issues) > 0 {
-						// Фильтруем только проблемы безопасности из AI-анализа
-						for _, aiIssue := range aiResult.Issues {
-							if aiIssue.Type == "security" || aiIssue.Type == "vulnerability" ||
-								aiIssue.Type == "injection" || aiIssue.Type == "xss" ||
-								aiIssue.Type == "sqli" || aiIssue.Type == "authentication" ||
-								aiIssue.Type == "authorization" {
-								// Добавляем информацию о файле
-								aiIssue.File = file
-								securityIssues = append(securityIssues, aiIssue)
-							}
+					// Фильтруем только проблемы безопасности из AI-анализа
+					for _, aiIssue := range aiResult.Issues {
+						if aiIssue.Type == "security" || aiIssue.Type == "vulnerability" ||
+							aiIssue.Type == "injection" || aiIssue.Type == "xss" ||
+							aiIssue.Type == "sqli" || aiIssue.Type == "authentication" ||
+							aiIssue.Type == "authorization" {
+							// Добавляем информацию о файле
+							aiIssue.File = file
+							securityIssues = append(securityIssues, aiIssue)
 						}
 					}
+
+					if verbose && len(aiResult.Issues) > 0 {
+						fmt.Printf("   ⚠️  Найдено проблем: %d\n", len(aiResult.Issues))
+					}
+
 				}
 
 				fmt.Printf("\n📊 Результаты сканирования безопасности:\n")

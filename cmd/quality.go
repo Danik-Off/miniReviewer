@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"miniReviewer/internal/analyzer"
 	"miniReviewer/internal/filesystem"
@@ -116,7 +115,7 @@ func QualityCmd() *cobra.Command {
 			var totalIssues int
 			var results []*types.CodeAnalysisResult
 
-			codeAnalyzer := analyzer.NewCodeAnalyzer()
+			qualityAnalyzer := analyzer.NewQualityAnalyzer()
 
 			for i, file := range files {
 				if verbose {
@@ -140,42 +139,13 @@ func QualityCmd() *cobra.Command {
 				ext := strings.ToLower(filepath.Ext(file))
 				var result *types.CodeAnalysisResult
 
-				if ext == ".js" || ext == ".ts" {
-					// Для JavaScript файлов используем статический анализ
-					jsIssues := codeAnalyzer.AnalyzeJavaScript(string(content), file)
-
-					if verbose {
-						// С флагом verbose также запускаем AI-анализ для получения размышлений
-						aiResult, err := codeAnalyzer.AnalyzeCode(string(content), fmt.Sprintf("Quality analysis of JavaScript file %s", file))
-						if err == nil && len(aiResult.Issues) > 0 {
-							// Объединяем статические проблемы с AI-размышлениями
-							for i := range jsIssues {
-								// Ищем соответствующую AI-проблему по типу и строке
-								for _, aiIssue := range aiResult.Issues {
-									if aiIssue.Type == jsIssues[i].Type && aiIssue.Line == jsIssues[i].Line {
-										jsIssues[i].Reasoning = aiIssue.Reasoning
-										break
-									}
-								}
-							}
-						}
-					}
-
-					result = &types.CodeAnalysisResult{
-						File:      file,
-						Issues:    jsIssues,
-						Score:     100 - len(jsIssues)*10, // Оценка на основе количества проблем
-						Timestamp: time.Now(),
-					}
-				} else {
-					// Для других файлов используем AI-анализ
-					aiResult, err := codeAnalyzer.AnalyzeCode(string(content), fmt.Sprintf("Quality analysis of %s", file))
-					if err != nil {
-						fmt.Printf("⚠️  Ошибка анализа %s: %v\n", file, err)
-						continue
-					}
-					result = aiResult
+				// Используем AI-анализ качества для всех типов файлов
+				aiResult, err := qualityAnalyzer.Analyze(string(content), fmt.Sprintf("Quality analysis of %s file %s", ext, file))
+				if err != nil {
+					fmt.Printf("⚠️  Ошибка анализа %s: %v\n", file, err)
+					continue
 				}
+				result = aiResult
 
 				if verbose {
 					fmt.Printf("   ✅ AI-анализ завершен (оценка: %d/100, проблем: %d)\n", result.Score, len(result.Issues))
