@@ -72,7 +72,7 @@ func (a *SecurityAnalyzer) buildPrompt(code string, context string) string {
 - Дай конкретные предложения по исправлению
 - Объясни, какой риск представляет уязвимость
 
-ОТВЕТЬ В ФОРМАТЕ JSON:
+ОТВЕТЬ ТОЛЬКО В ФОРМАТЕ JSON БЕЗ ДОПОЛНИТЕЛЬНОГО ТЕКСТА:
 {
   "score": 85,
   "issues": [
@@ -92,24 +92,43 @@ func (a *SecurityAnalyzer) buildPrompt(code string, context string) string {
 func (a *SecurityAnalyzer) analyzeWithAI(prompt string) (*types.CodeAnalysisResult, error) {
 	response, err := a.ollamaClient.Generate(prompt)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ошибка AI-анализа безопасности: %v", err)
 	}
 
-	var result types.CodeAnalysisResult
-	if err := json.Unmarshal([]byte(response), &result); err != nil {
-		result = types.CodeAnalysisResult{
-			Issues: []types.Issue{
-				{
-					Type:       "security",
-					Severity:   "info",
-					Message:    "AI анализ безопасности завершен",
-					Suggestion: response,
-				},
-			},
-			Score:     75,
-			Timestamp: time.Now(),
-		}
+	// Пытаемся извлечь JSON из ответа
+	jsonData := extractJSONFromResponse(response)
+	if jsonData == "" {
+		return a.createFallbackResult(response), nil
 	}
+
+	// Парсим JSON
+	var result types.CodeAnalysisResult
+	if err := json.Unmarshal([]byte(jsonData), &result); err != nil {
+		// Если JSON невалиден, создаем fallback результат
+		return a.createFallbackResult(response), nil
+	}
+
+	// Проверяем валидность результата и устанавливаем значения по умолчанию
+	result = a.validateAndFixResult(result)
+	result.Timestamp = time.Now()
 
 	return &result, nil
+}
+
+// createFallbackResult создает fallback результат когда AI не может вернуть валидный JSON
+func (a *SecurityAnalyzer) createFallbackResult(response string) *types.CodeAnalysisResult {
+	// Анализируем ответ AI и пытаемся извлечь полезную информацию
+	keywords := []string{"проблема", "issue", "ошибка", "error", "уязвимость", "vulnerability", "безопасность", "security"}
+	issues := extractIssuesFromTextBase(response, "security", "AI анализ безопасности завершен", "Требуется ручной анализ безопасности", keywords)
+
+	return &types.CodeAnalysisResult{
+		Issues:    issues,
+		Score:     75, // Средняя оценка по умолчанию
+		Timestamp: time.Now(),
+	}
+}
+
+// validateAndFixResult проверяет и исправляет результат анализа
+func (a *SecurityAnalyzer) validateAndFixResult(result types.CodeAnalysisResult) types.CodeAnalysisResult {
+	return validateAndFixBaseResult(result, "security", "Проблема безопасности кода", "Требуется ручной анализ и исправление")
 }

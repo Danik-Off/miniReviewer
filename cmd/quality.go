@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -43,7 +42,7 @@ func QualityCmd() *cobra.Command {
 func runQualityAnalysis(severity, output, path string, ignore []string) {
 	verbose := viper.GetBool("verbose")
 
-	printAnalysisHeader(severity, verbose)
+	printQualityHeader(severity, verbose)
 
 	// Определяем путь для анализа
 	analysisPath := getAnalysisPath(path)
@@ -66,25 +65,25 @@ func runQualityAnalysis(severity, output, path string, ignore []string) {
 	fmt.Printf("Найдено файлов для анализа: %d\n", len(files))
 
 	if verbose {
-		printFileList(files)
+		analyzer.PrintFileList(files)
 	}
 
 	// Выполняем анализ
 	results := analyzeFiles(files, verbose)
 
 	// Выводим результаты
-	printAnalysisResults(results, verbose)
+	printQualityResults(results, verbose)
 
 	// Сохраняем результаты если указан файл
 	if output != "" {
-		saveAnalysisResults(results, output, verbose)
+		saveQualityResults(results, output, verbose)
 	}
 
 	fmt.Println("✅ Проверка качества завершена")
 }
 
-// printAnalysisHeader выводит заголовок анализа
-func printAnalysisHeader(severity string, verbose bool) {
+// printQualityHeader выводит заголовок анализа качества
+func printQualityHeader(severity string, verbose bool) {
 	fmt.Println("🔍 Запуск проверки качества...")
 	fmt.Printf("Модель: %s\n", viper.GetString("ollama.default_model"))
 	fmt.Printf("Уровень важности: %s\n", severity)
@@ -147,15 +146,6 @@ func getSingleFileForAnalysis(filePath string) ([]string, error) {
 	return nil, fmt.Errorf("файл %s не поддерживается. Поддерживаемые расширения: %v", filePath, supportedExtensions)
 }
 
-// printFileList выводит список файлов для анализа
-func printFileList(files []string) {
-	fmt.Println("📋 Список файлов для анализа:")
-	for i, file := range files {
-		fmt.Printf("  %d. %s\n", i+1, file)
-	}
-	fmt.Println()
-}
-
 // analyzeFiles анализирует список файлов
 func analyzeFiles(files []string, verbose bool) []*types.CodeAnalysisResult {
 	var results []*types.CodeAnalysisResult
@@ -207,22 +197,22 @@ func analyzeSingleFile(file string, analyzer *analyzer.QualityAnalyzer, verbose 
 	return result
 }
 
-// printAnalysisResults выводит результаты анализа
-func printAnalysisResults(results []*types.CodeAnalysisResult, verbose bool) {
+// printQualityResults выводит результаты анализа качества
+func printQualityResults(results []*types.CodeAnalysisResult, verbose bool) {
 	if len(results) == 0 {
 		fmt.Println("❌ Не удалось проанализировать ни одного файла")
 		return
 	}
 
 	// Выводим найденные проблемы
-	printIssues(results, verbose)
+	printQualityIssues(results, verbose)
 
 	// Выводим общую статистику
-	printStatistics(results, verbose)
+	analyzer.PrintStatistics(results, verbose)
 }
 
-// printIssues выводит найденные проблемы
-func printIssues(results []*types.CodeAnalysisResult, verbose bool) {
+// printQualityIssues выводит найденные проблемы качества
+func printQualityIssues(results []*types.CodeAnalysisResult, verbose bool) {
 	var hasIssues bool
 	for _, result := range results {
 		if len(result.Issues) > 0 {
@@ -239,7 +229,7 @@ func printIssues(results []*types.CodeAnalysisResult, verbose bool) {
 	fmt.Printf("\n🔍 Найденные проблемы:\n")
 	for _, result := range results {
 		if len(result.Issues) > 0 {
-			printFileIssues(result, verbose)
+			analyzer.PrintFileIssues(result, verbose)
 		} else if verbose {
 			fmt.Printf("\n✅ %s: проблем не найдено\n", result.File)
 		}
@@ -295,24 +285,15 @@ func printStatistics(results []*types.CodeAnalysisResult, verbose bool) {
 	}
 }
 
-// saveAnalysisResults сохраняет результаты анализа в файл
-func saveAnalysisResults(results []*types.CodeAnalysisResult, output string, verbose bool) {
+// saveQualityResults сохраняет результаты анализа качества в файл
+func saveQualityResults(results []*types.CodeAnalysisResult, output string, verbose bool) {
 	if verbose {
 		fmt.Printf("💾 Сохраняю результаты в файл: %s\n", output)
 	}
 
-	if err := saveResultsToFile(results, output); err != nil {
+	if err := analyzer.SaveResultsToFile(results, output); err != nil {
 		fmt.Printf("❌ Ошибка сохранения: %v\n", err)
 	} else {
 		fmt.Printf("\n💾 Результаты сохранены в: %s\n", output)
 	}
-}
-
-// saveResultsToFile сохраняет результаты анализа в файл
-func saveResultsToFile(results []*types.CodeAnalysisResult, filename string) error {
-	data, err := json.MarshalIndent(results, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(filename, data, 0644)
 }

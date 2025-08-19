@@ -129,3 +129,41 @@ func (c *Client) GetFileContent(commit, filepath string) (string, error) {
 
 	return string(output), nil
 }
+
+// GetUnstagedDiff получает diff незакоммиченных изменений
+func (c *Client) GetUnstagedDiff() (string, error) {
+	cmd := exec.Command("git", "diff")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("ошибка получения unstaged diff: %v", err)
+	}
+	return string(output), nil
+}
+
+// GetStagedDiff получает diff подготовленных к коммиту изменений
+func (c *Client) GetStagedDiff() (string, error) {
+	cmd := exec.Command("git", "diff", "--cached")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("ошибка получения staged diff: %v", err)
+	}
+	return string(output), nil
+}
+
+// GetMainBranch получает основную ветку (main или master)
+func (c *Client) GetMainBranch() string {
+	// Сначала пробуем main
+	cmd := exec.Command("git", "rev-parse", "--verify", "main")
+	if cmd.Run() == nil {
+		return "main"
+	}
+	
+	// Если main не существует, пробуем master
+	cmd = exec.Command("git", "rev-parse", "--verify", "master")
+	if cmd.Run() == nil {
+		return "master"
+	}
+	
+	// Если ни одна не существует, возвращаем пустую строку
+	return ""
+}

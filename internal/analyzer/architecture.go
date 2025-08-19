@@ -30,7 +30,7 @@ func (a *ArchitectureAnalyzer) Analyze(code string, context string) (*types.Code
 // buildPrompt строит промпт для анализа архитектуры
 func (a *ArchitectureAnalyzer) buildPrompt(code string, context string) string {
 	language := detectLanguage(context)
-	
+
 	return fmt.Sprintf(`Ты - эксперт по архитектуре кода на языке %s. Проанализируй следующий код с точки зрения архитектуры:
 
 КОНТЕКСТ: %s
@@ -74,7 +74,7 @@ func (a *ArchitectureAnalyzer) buildPrompt(code string, context string) string {
 - Дай конкретные предложения по исправлению
 - Объясни, как это влияет на архитектуру
 
-ОТВЕТЬ В ФОРМАТЕ JSON:
+ОТВЕТЬ ТОЛЬКО В ФОРМАТЕ JSON БЕЗ ДОПОЛНИТЕЛЬНОГО ТЕКСТА:
 {
   "score": 85,
   "issues": [
@@ -94,24 +94,43 @@ func (a *ArchitectureAnalyzer) buildPrompt(code string, context string) string {
 func (a *ArchitectureAnalyzer) analyzeWithAI(prompt string) (*types.CodeAnalysisResult, error) {
 	response, err := a.ollamaClient.Generate(prompt)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ошибка AI-анализа архитектуры: %v", err)
 	}
 
-	var result types.CodeAnalysisResult
-	if err := json.Unmarshal([]byte(response), &result); err != nil {
-		result = types.CodeAnalysisResult{
-			Issues: []types.Issue{
-				{
-					Type:       "architecture",
-					Severity:   "info",
-					Message:    "AI анализ архитектуры завершен",
-					Suggestion: response,
-				},
-			},
-			Score:     75,
-			Timestamp: time.Now(),
-		}
+	// Пытаемся извлечь JSON из ответа
+	jsonData := extractJSONFromResponse(response)
+	if jsonData == "" {
+		return a.createFallbackResult(response), nil
 	}
+
+	// Парсим JSON
+	var result types.CodeAnalysisResult
+	if err := json.Unmarshal([]byte(jsonData), &result); err != nil {
+		// Если JSON невалиден, создаем fallback результат
+		return a.createFallbackResult(response), nil
+	}
+
+	// Проверяем валидность результата и устанавливаем значения по умолчанию
+	result = a.validateAndFixResult(result)
+	result.Timestamp = time.Now()
 
 	return &result, nil
+}
+
+// createFallbackResult создает fallback результат когда AI не может вернуть валидный JSON
+func (a *ArchitectureAnalyzer) createFallbackResult(response string) *types.CodeAnalysisResult {
+	// Анализируем ответ AI и пытаемся извлечь полезную информацию
+	keywords := []string{"проблема", "issue", "ошибка", "error", "архитектура", "architecture"}
+	issues := extractIssuesFromTextBase(response, "architecture", "AI анализ архитектуры завершен", "Требуется ручной анализ архитектуры", keywords)
+
+	return &types.CodeAnalysisResult{
+		Issues:    issues,
+		Score:     75, // Средняя оценка по умолчанию
+		Timestamp: time.Now(),
+	}
+}
+
+// validateAndFixResult проверяет и исправляет результат анализа
+func (a *ArchitectureAnalyzer) validateAndFixResult(result types.CodeAnalysisResult) types.CodeAnalysisResult {
+	return validateAndFixBaseResult(result, "architecture", "Проблема архитектуры кода", "Требуется ручной анализ и исправление")
 }
